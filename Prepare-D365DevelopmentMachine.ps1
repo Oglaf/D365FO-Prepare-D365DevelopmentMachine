@@ -15,38 +15,36 @@
  #  Download useful SQL and PowerShell scripts, using Git?
  #>
 
+ # Clean all logs from Event Viewer
+ wevtutil el | Foreach-Object {wevtutil cl "$_"}
+
+ # region Installing d365fo.tools
+
+ # This is requried by Find-Module, by doing it beforehand we remove some warning messages
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
+If ((Find-Module -Name d365fo.tools).InstalledDate -eq $null) {
+    Write-Host "Installing d365fo.tools"
+    Write-Host "    Documentation: https://github.com/d365collaborative/d365fo.tools"
+    Install-Module -Name d365fo.tools -SkipPublisherCheck -Scope AllUsers
+}
+else {
+    Write-Host "Updating d365fo.tools"
+    Update-Module -name d365fo.tools -SkipPublisherCheck -Scope AllUsers
+}
+
+# Stops D365FO ASAP to save CPU and RAM
+Stop-D365Environment
+
+# endregion
+
+
 #region Install additional apps using Chocolatey
 
 #update visual studio
 Start-Process -Wait `
     -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" `
-    -ArgumentList 'update --passive --norestart --installpath "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional"'
-
-
-#install TrudAX
-$repo = "TrudAX/TRUDUtilsD365"
-$releases = "https://api.github.com/repos/$repo/releases"
-$path = "C:\Temp\Addin"
-
-If (!(test-path $path)) {
-    New-Item -ItemType Directory -Force -Path $path
-}
-cd $path
-
-Write-Host Determining latest release
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$tag = (Invoke-WebRequest -Uri $releases -UseBasicParsing | ConvertFrom-Json)[0].tag_name
-
-$files = @("InstallToVS.exe", "TRUDUtilsD365.dll", "TRUDUtilsD365.pdb")
-
-Write-Host Downloading files
-foreach ($file in $files) {
-    $download = "https://github.com/$repo/releases/download/$tag/$file"
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest $download -Out $file
-    Unblock-File $file
-}
-Start-Process "InstallToVS.exe" -Verb runAs
+    -ArgumentList 'update --passive --norestart --installpath "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"'
 
 
 # Set file and folder path for SSMS installer .exe
@@ -105,29 +103,24 @@ Else {
     }
     $chocoExePath = Join-Path $chocoPath 'bin\choco.exe'
 
-    $LargeTables = @(
-        #"LargeTables"
-    )
-
     $packages = @(
-        "adobereader"
         "azure-cli"
-        "azure-data-studio"
         "azurepowershell"
         "dotnetcore"
         "fiddler"
-        "git.install"
         "googlechrome"
         "notepadplusplus.install"
-        "p4merge"
         "7zip"
         "postman"
         "sysinternals"
         "vscode"
-        "visualstudio-codealignment"
         "vscode-azurerm-tools"
         "vscode-powershell"
         "winmerge"
+		"agentransack"
+		"wiztree"
+        "smtp4dev"
+        "greenshot"
     )
 
     # Install each program
@@ -141,21 +134,7 @@ Else {
 #endregion
 
 
-#region Installing d365fo.tools
-
-# This is requried by Find-Module, by doing it beforehand we remove some warning messages
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-
-# Installing d365fo.tools
-If ((Find-Module -Name d365fo.tools).InstalledDate -eq $null) {
-    Write-Host "Installing d365fo.tools"
-    Write-Host "    Documentation: https://github.com/d365collaborative/d365fo.tools"
-    Install-Module -Name d365fo.tools -SkipPublisherCheck -Scope AllUsers
-}
-else {
-    Write-Host "Updating d365fo.tools"
-    Update-Module -name d365fo.tools -SkipPublisherCheck -Scope AllUsers
-}
+#region d365fo.tools
 
 Write-Host "Setting web browser homepage to the local environment"
 Get-D365Url | Set-D365StartPage
@@ -165,7 +144,6 @@ Get-D365Environment -FinancialReporter | Set-Service -StartupType Manual
 
 Write-Host "Setting Windows Defender rules to speed up compilation time"
 Add-D365WindowsDefenderRules -Silent
-
 
 #endregion
 
@@ -338,12 +316,6 @@ If (Test-Path "HKLM:\Software\Microsoft\Microsoft SQL Server\Instance Names\SQL"
 
     Execute-Sql -server "." -database "AxDB" -command $sql
 
-    Write-Host "purging disposable large tables data"
-    $LargeTables | ForEach-Object {
-        $sql = "delete $_ where $_.CREATEDDATETIME < dateadd(""MM"", -2, getdate())"
-        Execute-Sql -server "." -database "AxDB" -command $sql
-    }
-
     $sql = "DELETE [REFERENCES] FROM [REFERENCES]
     JOIN Names ON (Names.Id = [REFERENCES].SourceId OR Names.Id = [REFERENCES].TargetId)
     JOIN Modules ON Names.ModuleId = Modules.Id
@@ -380,15 +352,7 @@ Else {
 #endregion
 
 
-#region Update PowerShell Help, power settings
-
-Write-Host "Updating PowerShell help"
-$what = ""
-Update-Help  -Force -Ea 0 -Ev what
-If ($what) {
-    Write-Warning "Minor error when updating PowerShell help"
-    Write-Host $what.Exception
-}
+#region Update power settings
 
 # Set power settings to High Performance
 Write-Host "Setting power settings to High Performance"
@@ -400,12 +364,12 @@ powercfg.exe /SetActive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 if ((Get-WmiObject Win32_OperatingSystem).Caption -Like "*Windows 10*") {
 
-    #Write-Host "Changing Windows Updates to -Notify to schedule restart-"
-    #Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings -Name UxOption -Type DWord -Value 1
-
     Write-Host "Disabling P2P Update downlods outside of local network"
     Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config -Name DODownloadMode -Type DWord -Value 1
     Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization -Name SystemSettingsDownloadMode -Type DWord -Value 3
-}
+} 
 
 #endregion
+
+# Start environment after script finishes
+Start-D365Environment

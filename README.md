@@ -1,5 +1,8 @@
 # Prepare-D365DevelopmentMachine
-This repository contains a script for preparing a development machine for Dynamics 365 for Finance and Operations by installing additional tools and configuring the operating system automatically.  The script does the following:
+This repository contains a script for preparing a development machine for Dynamics 365 for Finance and Operations by installing additional tools and configuring the operating system automatically. The script was originally created by [dodiggitydag](https://github.com/dodiggitydag), and this is a fork of the original repository.
+
+### Purpose
+The purpose of this fork is to update the script to support Visual Studio 2019. All credit goes to the original author, and any contributions or suggestions are welcome.
 
 ### Utilities
 *	[Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/overview?view=azurermps-6.11.0)
@@ -20,7 +23,6 @@ This repository contains a script for preparing a development machine for Dynami
 
 ### Performance Enhancements
 * Rebuilds/Reorganizes SQL Server indexes on all databases
-* Defragments the disk (vhd)
 * Sets Windows Defender rules to speed up compilation time
 * Prevents Management Reporter from automatically starting
 
@@ -48,11 +50,11 @@ Please record any problems encountered as issues to this repository.  Occasional
 ## d365fo.tools
 If you are not already using [d365fo.tools](https://github.com/d365collaborative/d365fo.tools) you should!  You can use the Install-D365SupportingSoftware command to install the packages this script does, quickly.
 
-## Contributions are Encouraged
+## Contributions are encouraged
 There are several ways to contribute or give thanks:
 
-A. Fork this repository, commit the necessary changes to your forked repository, then issue a pull request.  This will notify me to review the changes, test them, and incorporate them into the main script.
+A. Fork this repository, commit the necessary changes to your forked repository, then issue a pull request.
 
-B. Comment on [the blog post at Calafell.me](http://calafell.me/automatically-prepare-a-development-vm-for-microsoft-dynamics-365-for-finance-and-operations/).  I will evaluate the suggestion and incorporate into the script.
+B. Comment on the blog post at [Calafell.me](http://calafell.me/automatically-prepare-a-development-vm-for-microsoft-dynamics-365-for-finance-and-operations/).
 
-C. Tweet me at [@dodiggitydag](https://twitter.com/dodiggitydag).
+C. Tweet the original author at [@dodiggitydag](https://twitter.com/dodiggitydag).
