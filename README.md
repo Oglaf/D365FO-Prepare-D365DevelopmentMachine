@@ -15,7 +15,7 @@ The script performs the following actions:
 - Installs Chocolatey and a list of software packages commonly used in development environments, including .NET Core, Google Chrome, Notepad++, 7-Zip, Postman, Visual Studio Code, WinMerge, Agent Ransack, WizTree, smtp4dev, and Greenshot.
 
 ### Development optimization
-- Uses d365fo.tools to optimize the development environment. Sets the web browser homepage to the local environment, changes the startup type of Management Reporter and Batch services to Disabled (you should turn it on only when necessary), adds Windows Defender rules to speed up compilation time, and re-arms the Windows license.
+- Uses d365fo.tools to optimize the development environment. Sets the web browser homepage to the local environment, changes the startup type of Management Reporter and Batch services to Disabled (it is recommended to enable them only when necessary), adds Windows Defender rules to speed up compilation time, and re-arms the Windows license.
 
 ### SQL optimization
 - Optimizes SQL Server by installing the dbatools PowerShell module, setting max memory (4GB), adding trace flags, setting recovery model and database options, purging disposable and staging table data, deleting specific references, and reclaiming database space.
