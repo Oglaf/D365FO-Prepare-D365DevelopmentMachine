@@ -1,60 +1,42 @@
-# Prepare-D365DevelopmentMachine
-This repository contains a script for preparing a development machine for Dynamics 365 for Finance and Operations by installing additional tools and configuring the operating system automatically. The script was originally created by [dodiggitydag](https://github.com/dodiggitydag), and this is a fork of the original repository.
+# D365FO One-box Setup script
 
-### Purpose
-The purpose of this fork is to update the script to support Visual Studio 2019. All credit goes to the original author, and any contributions or suggestions are welcome.
+This PowerShell script automates the preparation of a D365 development machine. It performs various optimizations, installations, and configurations to ensure an efficient and streamlined development environment for Dynamics 365 Finance and Operations.
+This version is a fork of the original repository created by [dodiggitydag](https://github.com/dodiggitydag), and it has undergone significant changes to address bugs and ensure compatibility with the latest versions of SQL Server, Windows 2019, and Chocolatey. 
 
-### Utilities
-*	[Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/overview?view=azurermps-6.11.0)
-*	[Azure Command Line Interface (CLI)](https://docs.microsoft.com/en-us/cli/azure/get-started-with-azure-cli?view=azure-cli-latest)
-*	[d365fo.tools](https://github.com/d365collaborative/d365fo.tools), PowerShell commands for Dynamics 365 for Finance and Operations
-*	[dbatools](https://dbatools.io/), PowerShell commands for T-SQL
-*	[Edge](https://www.microsoft.com/en-us/edge)
-*	[Notepad++](https://notepad-plus-plus.org/)
-*	[Ola Hallengren's SQL maintenance solution](https://ola.hallengren.com/)
-*	[Peazip](http://www.peazip.org/)
-*	[Sysinternals tools](https://docs.microsoft.com/en-us/sysinternals/)
-*	[WinMerge](http://winmerge.org/) comparison tool
+## Compatibility
 
-### Integrations/Interface Testing Utilities
-*	[Fiddler](https://www.telerik.com/fiddler)
-*	[Postman](https://www.getpostman.com/)
-*	[Visual Studio Code](https://code.visualstudio.com/) w/Azure and SQL add-ins
+The script has been tested on one-box virtual machine, version 10.0.32 and earlier versions.
 
-### Performance Enhancements
-* Rebuilds/Reorganizes SQL Server indexes on all databases
-* Sets Windows Defender rules to speed up compilation time
-* Prevents Management Reporter from automatically starting
+## What it does?
+
+The script performs the following actions:
+
+### Software installation
+- Installs Chocolatey and a list of software packages commonly used in development environments, including .NET Core, Google Chrome, Notepad++, 7-Zip, Postman, Visual Studio Code, WinMerge, Agent Ransack, WizTree, smtp4dev, and Greenshot.
+
+### Development optimization
+- Uses d365fo.tools to optimize the development environment. Sets the web browser homepage to the local environment, changes the startup type of Management Reporter and Batch services to Disabled (you should turn it on only when necessary), adds Windows Defender rules to speed up compilation time, and re-arms the Windows license.
+
+### SQL optimization
+- Optimizes SQL Server by installing the dbatools PowerShell module, setting max memory (4GB), adding trace flags, setting recovery model and database options, purging disposable and staging table data, deleting specific references, and reclaiming database space.
 
 ### Miscellaneous
-* Sets the web browser homepage to the local environment URL
-* Set the password to never expire and disable change password menu item
-* Configures Windows Updates
-* Creates a logoff link on the desktop
-* Disables Bing search results
-* Disables Cortana
-* Disables Windows telemetry
-* Removes Metro apps on Windows 10
-* Sets power settings to high performance
-* Sets some privacy settings
-* Updates PowerShell command line help
+- Clears all logs from the Event Viewer to ensure a clean starting point.
+- Modifies the local user policy by setting the password to never expire and disabling password changes.
+- Disables various privacy-related features in Windows, including Windows Telemetry, Bing search results in the Start Menu, and Cortana.
+- Sets the power settings to High Performance to ensure optimal performance during development.
 
 ## Usage
-Before running this script, you should create the VM, either using LCS or the VHD, and start the environment.  The first hour may be Windows Updates and the "antimalware" executable doing a virus scan on the drive.  Once that has completed (possible reboot required), run the following command to execute the PowerShell script on the VM:
+
+Before running the script, prepare the machine by following these steps:
+
+1. Run the "Generate Self-Signed Certificates" script.
+2. Run "AdminUserProvisioning".
+3. Restore the database, if you have it, but keep the name AxDB.
+4. Install [.NET Framework 4.8](https://support.microsoft.com/en-us/topic/microsoft-net-framework-4-8-offline-installer-for-windows-9d23f658-3b97-68ab-d013-aa3c3e7495e0) and reboot.
+
+Either download the repository and execute PowerShell as an administrator or download and execute directly from GitHub:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/juliomutley/D365FO-Prepare-D365DevelopmentMachine/master/Prepare-D365DevelopmentMachine.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Oglaf/D365FO-Prepare-D365DevelopmentMachine/master/Prepare-D365DevelopmentMachine.ps1'))
 ```
-Please record any problems encountered as issues to this repository.  Occasionally the tool used for automatic installations, Chocolately, will have an invlalid link to the installer for the software.  This is nothing we can change, however, it can be reported to the Chocolately project team.
-
-## d365fo.tools
-If you are not already using [d365fo.tools](https://github.com/d365collaborative/d365fo.tools) you should!  You can use the Install-D365SupportingSoftware command to install the packages this script does, quickly.
-
-## Contributions are encouraged
-There are several ways to contribute or give thanks:
-
-A. Fork this repository, commit the necessary changes to your forked repository, then issue a pull request.
-
-B. Comment on the blog post at [Calafell.me](http://calafell.me/automatically-prepare-a-development-vm-for-microsoft-dynamics-365-for-finance-and-operations/).
-
-C. Tweet the original author at [@dodiggitydag](https://twitter.com/dodiggitydag).
