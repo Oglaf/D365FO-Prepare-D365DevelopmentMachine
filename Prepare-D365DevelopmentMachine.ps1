@@ -87,6 +87,7 @@ Else {
         "wiztree"
         "smtp4dev"
         "greenshot"
+        "nuget.commandline"
     )
 
     # Install each program

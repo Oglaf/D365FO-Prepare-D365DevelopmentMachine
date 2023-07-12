@@ -12,7 +12,7 @@ The script has been tested on one-box virtual machine, version 10.0.32 and earli
 The script performs the following actions:
 
 ### Software installation
-- Installs Chocolatey and a list of software packages commonly used in development environments, including .NET Core, Google Chrome, Notepad++, 7-Zip, Postman, Visual Studio Code, WinMerge, Agent Ransack, WizTree, smtp4dev, and Greenshot.
+- Installs Chocolatey and a list of software packages commonly used in development environments, including .NET Core, Google Chrome, Notepad++, 7-Zip, Postman, Visual Studio Code, NuGet, WinMerge, Agent Ransack, WizTree, smtp4dev, and Greenshot.
 
 ### Development optimization
 - Uses d365fo.tools to optimize the development environment. Sets the web browser homepage to the local environment, changes the startup type of Management Reporter and Batch services to Disabled (it is recommended to enable them only when necessary), adds Windows Defender rules to speed up compilation time, and re-arms the Windows license.
