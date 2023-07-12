@@ -1,11 +1,30 @@
 ﻿<# Prepare-D365DevelopmentMachine
  #
  # Preparation:
- # .NET Framework 4.8 required.
+ # .NET Framework 4.8 or above required.
  #
  # Compatibility:
  # The script has been tested on OneBox virtual machine, version 10.0.32 and earlier versions.
  #>
+
+ #region Check if required .NET version is installed
+
+$requiredVersion = '4.8'
+
+$dotNetVersion = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse |
+                Get-ItemProperty -name Version -EA 0 |
+                Where-Object { $_.PSChildName -match '^(?!S)\p{L}'} |
+                Select-Object -ExpandProperty Version |
+                Sort-Object -Descending |
+                Select-Object -First 1
+
+if ([string]::IsNullOrEmpty($dotNetVersion) -or [version]$dotNetVersion -lt [version]$requiredVersion) {
+    Write-Host "Error: .NET Framework $requiredVersion or a higher version is not installed on this computer."
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyUp')
+    Exit 1
+}
+#endregion
 
 # Clean all logs from Event Viewer
 Write-Host "Clearing logs from event viewer"
