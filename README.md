@@ -5,7 +5,7 @@ This version is a fork of the original repository created by [dodiggitydag](http
 
 ## Compatibility
 
-The script has been tested on one-box virtual machine, version 10.0.32 and earlier versions.
+The script has been tested on one-box virtual machine, version 10.0.37 and earlier versions.
 
 ## What it does?
 

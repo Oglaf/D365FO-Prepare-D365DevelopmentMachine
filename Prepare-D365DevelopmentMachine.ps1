@@ -4,7 +4,7 @@
  # .NET Framework 4.8 or above required.
  #
  # Compatibility:
- # The script has been tested on OneBox virtual machine, version 10.0.32 and earlier versions.
+ # The script has been tested on OneBox virtual machine, version 10.0.37 and earlier versions.
  #>
 
  #region Check if required .NET version is installed
@@ -300,7 +300,16 @@ powercfg.exe /SetActive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 #endregion
 
 #region Updating OS and installed software
-# Update Visual Studio
+# Update Visual Studio 2022
+$filepath = "C:\Program Files\Microsoft Visual Studio\2022\Professional"
+
+if (Test-Path $filepath) {
+    Start-Process -Wait `
+        -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" `
+        -ArgumentList "update --passive --norestart --installpath `"$filepath`""
+}
+
+# Update Visual Studio 2019
 Start-Process -Wait `
     -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" `
     -ArgumentList 'update --passive --norestart --installpath "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"'
