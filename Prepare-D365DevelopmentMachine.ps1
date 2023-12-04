@@ -93,7 +93,7 @@ Else {
     # Install each program
     foreach ($packageToInstall in $packages) {
         Write-Host "Installing $packageToInstall" -ForegroundColor Green
-        & $chocoExePath "install" $packageToInstall "-y" "-r"
+        & $chocoExePath "install" $packageToInstall "--ignore-checksums" "-y" "-r"
     }
 }
 #endregion
