@@ -4,19 +4,16 @@
  # .NET Framework 4.8 or above required.
  #
  # Compatibility:
- # The script has been tested on OneBox virtual machine, version 10.0.37 and earlier versions.
+ # The script has been tested on OneBox virtual machine, version 10.0.43 and earlier versions.
  #>
-
- #region Check if required .NET version is installed
-
+#region Check if required .NET version is installed
 $requiredVersion = '4.8'
-
 $dotNetVersion = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse |
-                Get-ItemProperty -name Version -EA 0 |
-                Where-Object { $_.PSChildName -match '^(?!S)\p{L}'} |
-                Select-Object -ExpandProperty Version |
-                Sort-Object -Descending |
-                Select-Object -First 1
+                 Get-ItemProperty -name Version -EA 0 |
+                 Where-Object { $_.PSChildName -match '^(?!S)\p{L}'} |
+                 Select-Object -ExpandProperty Version |
+                 Sort-Object -Descending |
+                 Select-Object -First 1
 
 if ([string]::IsNullOrEmpty($dotNetVersion) -or [version]$dotNetVersion -lt [version]$requiredVersion) {
     Write-Host "Error: .NET Framework $requiredVersion or a higher version is not installed on this computer."
@@ -28,7 +25,7 @@ if ([string]::IsNullOrEmpty($dotNetVersion) -or [version]$dotNetVersion -lt [ver
 
 # Clean all logs from Event Viewer
 Write-Host "Clearing logs from event viewer"
-wevtutil el | Foreach-Object {wevtutil cl "$_"}
+wevtutil el | Foreach-Object { wevtutil cl "$_" }
 
 #region Installing d365fo.tools
 
@@ -36,7 +33,7 @@ wevtutil el | Foreach-Object {wevtutil cl "$_"}
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
 if (Get-Module -ListAvailable -Name d365fo.tools) {
-	Write-Host "Updating d365fo.tools"
+    Write-Host "Updating d365fo.tools"
     Update-Module -Name d365fo.tools
 }
 else {
@@ -76,13 +73,10 @@ Else {
     $chocoExePath = Join-Path $chocoPath 'bin\choco.exe'
 
     $packages = @(
-        "dotnetcore"
         "googlechrome"
         "notepadplusplus.install"
         "7zip"
         "postman"
-        "vscode"
-        "winmerge"
         "agentransack"
         "wiztree"
         "smtp4dev"
@@ -100,9 +94,6 @@ Else {
 
 #region Optimizing using d365fo.tools
 if (Get-Module -ListAvailable -Name d365fo.tools) {
-    Write-Host "Setting web browser homepage to the local environment"
-    Get-D365Url | Set-D365StartPage
-
     Write-Host "Setting Management Reporter to Disabled to reduce churn and Event Log messages"
     Get-D365Environment -FinancialReporter | Set-Service -StartupType Disabled
 
@@ -158,7 +149,7 @@ Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search -N
 Set-ItemProperty -Path HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots -Name value -Type DWord -Value 0
 
 # Activity Tracking: Disable
-@('EnableActivityFeed','PublishUserActivities','UploadUserActivities') |% { Set-ItemProperty -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\System -Name $_ -Type DWord -Value 0 }
+@('EnableActivityFeed','PublishUserActivities','UploadUserActivities') | ForEach-Object { Set-ItemProperty -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\System -Name $_ -Type DWord -Value 0 }
 
 # Start Menu: Disable Cortana
 if (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings")) {
@@ -179,116 +170,156 @@ if (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search")) {
 }
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Type DWord -Value 0
 
-#endregion
-
-#region SQL optimization
-Function Execute-Sql {
-    Param(
-        [Parameter(Mandatory = $true)][string]$server,
-        [Parameter(Mandatory = $true)][string]$database,
-        [Parameter(Mandatory = $true)][string]$command
-    )
-    Process {
-        $scon = New-Object System.Data.SqlClient.SqlConnection
-        $scon.ConnectionString = "Data Source=$server;Initial Catalog=$database;Integrated Security=true"
-
-        $cmd = New-Object System.Data.SqlClient.SqlCommand
-        $cmd.Connection = $scon
-        $cmd.CommandTimeout = 0
-        $cmd.CommandText = $command
-
-        try {
-            $scon.Open()
-            $cmd.ExecuteNonQuery()
-        }
-        catch [Exception] {
-            Write-Warning $_.Exception.Message
-        }
-        finally {
-            $scon.Dispose()
-            $cmd.Dispose()
-        }
-    }
+# Debloat Microsoft Edge
+Write-Host "Applying Microsoft Edge debloat settings"
+$edgeRegPath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
+if (!(Test-Path $edgeRegPath)) {
+    New-Item -Path $edgeRegPath -Force | Out-Null
 }
 
-If (Test-Path "HKLM:\Software\Microsoft\Microsoft SQL Server\Instance Names\SQL") {
-    if (Get-Module -ListAvailable -Name dbatools) {
-        Write-Host "Updating dbatools"
-        Update-Module -Name dbatools
-    }
-    else {
-        Write-Host "Installing dbatools PowerShell module"
-        Install-Module -Name dbatools -SkipPublisherCheck -Scope AllUsers
-        Import-Module dbatools
-    }
-
-    Set-DbatoolsInsecureConnection -SessionOnly
-
-    Write-Host "Setting max memory to 4GB"
-    Set-DbaMaxMemory -SqlInstance . -Max 4096
-    
-    Write-Host "Adding trace flags"
-    Enable-DbaTraceFlag -SqlInstance . -TraceFlag 174, 834, 1204, 1222, 1224, 2505, 7412
-
-    Write-Host "Restarting service"
-    Restart-DbaService -Type Engine -Force
-
-    Write-Host "Setting recovery model"
-    Set-DbaDbRecoveryModel -SqlInstance . -RecoveryModel Simple -Database AxDB -Confirm:$false
-
-    Write-Host "Setting database options"
-    $sql = "ALTER DATABASE [AxDB] SET AUTO_CLOSE OFF"
-    Execute-Sql -server "." -database "AxDB" -command $sql
-
-    $sql = "ALTER DATABASE [AxDB] SET AUTO_UPDATE_STATISTICS_ASYNC OFF"
-    Execute-Sql -server "." -database "AxDB" -command $sql
-
-    Write-Host "Setting batchservergroup options"
-    $sql = "delete batchservergroup where SERVERID <> 'Batch:'+@@servername
-
-    insert into batchservergroup(GROUPID, SERVERID, RECID, RECVERSION, CREATEDDATETIME, CREATEDBY)
-    select GROUP_, 'Batch:'+@@servername, 5900000000 + cast(CRYPT_GEN_RANDOM(4) as bigint), 1, GETUTCDATE(), '-admin-' from batchgroup
-        where not EXISTS (select recid from batchservergroup where batchservergroup.GROUPID = batchgroup.GROUP_)"
-    Execute-Sql -server "." -database "AxDB" -command $sql
-
-    Write-Host "purging disposable data"
-    $sql = "truncate table batchjobhistory
-    truncate table batchhistory
-    truncate table eventcud
-    truncate table sysdatabaselog
-    delete batchjob where status in (3, 4, 8)
-    delete batch where not exists (select recid from batchjob where batch.BATCHJOBID = BATCHJOB.recid)
-
-    EXEC sp_msforeachtable
-    @command1 ='truncate table ?'
-    ,@whereand = ' And Object_id In (Select Object_id From sys.objects
-    Where name like ''%tmp'')'"
-
-    Execute-Sql -server "." -database "AxDB" -command $sql
-
-    Write-Host "purging staging tables data"
-    $sql = "EXEC sp_msforeachtable
-    @command1 ='truncate table ?'
-    ,@whereand = ' And Object_id In (Select Object_id From sys.objects
-    Where name like ''%staging'')'"
-
-    Execute-Sql -server "." -database "AxDB" -command $sql
-
-    $sql = "DELETE [REFERENCES] FROM [REFERENCES]
-    JOIN Names ON (Names.Id = [REFERENCES].SourceId OR Names.Id = [REFERENCES].TargetId)
-    JOIN Modules ON Names.ModuleId = Modules.Id
-    WHERE Module LIKE '%Test%' AND Module <> 'TestEssentials'"
-
-    Execute-Sql -server "." -database "DYNAMICSXREFDB" -command $sql
-
-    Write-Host "Reclaiming freed database space"
-    Invoke-DbaDbShrink -SqlInstance . -Database "AxDb", "DYNAMICSXREFDB" -FileType Data
-
-    Write-Host "Reclaiming database log space"
-    Invoke-DbaDbShrink -SqlInstance . -Database "AxDb", "DYNAMICSXREFDB" -FileType Log -ShrinkMethod TruncateOnly
+$edgeSettings = @{
+    "HideFirstRunExperience" = 1
+    "SearchInSidebarEnabled" = 2
+    "HubsSidebarEnabled" = 0
+    "ReadAloudEnabled" = 0
+    "DiagnosticData" = 0
+    "PinBrowserEssentialsToolbarButton" = 0
+    "EdgeCollectionsEnabled" = 0
+    "PersonalizationReportingEnabled" = 0
+    "SplitScreenEnabled" = 0
+    "ImplicitSignInEnabled" = 0
+    "GuidedSwitchEnabled" = 0
+    "EdgeDefaultProfileEnabled" = "Default"
+    "BrowserSignin" = 0
+    "ShowMicrosoftRewards" = 0
+    "AutoImportAtFirstRun" = 4
+    "EdgeWorkspacesEnabled" = 0
+    "EdgeWalletCheckoutEnabled" = 0
+    "EdgeWalletEtreeEnabled" = 0
+    "BuiltInDnsClientEnabled" = 0
+    "AADWebSiteSSOUsingThisProfileEnabled" = 0
+    "AccessibilityImageLabelsEnabled" = 0
+    "AddressBarMicrosoftSearchInBingProviderEnabled" = 0
+    "AllowGamesMenu" = 0
+    "AutomaticHttpsDefault" = 2
+    "BrowserAddProfileEnabled" = 0
+    "BrowserGuestModeEnabled" = 0
+    "ComposeInlineEnabled" = 0
+    "ConfigureOnPremisesAccountAutoSignIn" = 0
+    "ConfigureOnlineTextToSpeech" = 0
+    "ConfigureShare" = 0
+    "DefaultBrowserSettingsCampaignEnabled" = 0
+    "Edge3PSerpTelemetryEnabled" = 0
+    "EdgeEDropEnabled" = 0
+    "SyncDisabled" = 1
+    "WalletDonationEnabled" = 0
+    "NonRemovableProfileEnabled" = 0
+    "ImportOnEachLaunch" = 0
+    "InAppSupportEnabled" = 0
+    "LocalBrowserDataShareEnabled" = 0
+    "LiveCaptionsAllowed" = 0
+    "MSAWebSiteSSOUsingThisProfileAllowed" = 0
+    "MicrosoftEdgeInsiderPromotionEnabled" = 0
+    "MicrosoftEditorSynonymsEnabled" = 0
+    "MicrosoftEditorProofingEnabled" = 0
+    "RelatedWebsiteSetsEnabled" = 0
+    "PaymentMethodQueryEnabled" = 0
+    "PinningWizardAllowed" = 0
+    "PromotionalTabsEnabled" = 0
+    "QuickSearchShowMiniMenu" = 0
+    "QuickViewOfficeFilesEnabled" = 0
+    "RemoteDebuggingAllowed" = 0
+    "ResolveNavigationErrorsUseWebService" = 0
+    "RoamingProfileSupportEnabled" = 0
+    "SearchForImageEnabled" = 0
+    "SearchFiltersEnabled" = 0
+    "SearchSuggestEnabled" = 0
+    "SearchbarAllowed" = 0
+    "SearchbarIsEnabledOnStartup" = 0
+    "SharedLinksEnabled" = 0
+    "ShowAcrobatSubscriptionButton" = 0
+    "ShowOfficeShortcutInFavoritesBar" = 0
+    "ShowRecommendationsEnabled" = 0
+    "SpeechRecognitionEnabled" = 0
+    "StandaloneHubsSidebarEnabled" = 0
+    "TabServicesEnabled" = 0
+    "TextPredictionEnabled" = 0
+    "UploadFromPhoneEnabled" = 0
+    "VisualSearchEnabled" = 0
+    "NewTabPageSearchBox" = "redirect"
+    "PasswordGeneratorEnabled" = 0
+    "PasswordManagerEnabled" = 0
+    "PasswordMonitorAllowed" = 0
+    "PasswordProtectionWarningTrigger" = 0
+    "AlternateErrorPagesEnabled" = 0
+    "AskBeforeCloseEnabled" = 0
+    "AutofillAddressEnabled" = 0
+    "AutofillCreditCardEnabled" = 0
+    "AutofillMembershipsEnabled" = 0
+    "AADWebSSOAllowed" = 0
+    "AIGenThemesEnabled" = 0
+    "AccessCodeCastEnabled" = 0
+    "AdditionalDnsQueryTypesEnabled" = 0
+    "AdsTransparencyEnabled" = 0
+    "EdgeAdminCenterEnabled" = 0
+    "BingAdsSuppression" = 1
+    "ConfigureDoNotTrack" = 1
+    "EdgeAssetDeliveryServiceEnabled" = 0
+    "EdgeShoppingAssistantEnabled" = 0
+    "ExperimentationAndConfigurationServiceControl" = 0
+    "NetworkPredictionOptions" = 0
+    "UserFeedbackAllowed" = 0
+    "WebWidgetAllowed" = 0
+    "TyposquattingCheckerEnabled" = 0
+    "TrackingPrevention" = 3
+    "SigninInterceptionEnabled" = 0
+    "SideSearchEnabled" = 0
+    "ShowPDFDefaultRecommendationsEnabled" = 0
+    "ShowHomeButton" = 0
+    "ShoppingListEnabled" = 0
+    "SafeBrowsingSurveysEnabled" = 0
+    "SafeBrowsingDeepScanningEnabled" = 0
+    "SafeBrowsingProxiedRealTimeChecksAllowed" = 0
+    "PasswordDismissCompromisedAlertEnabled" = 0
+    "MAMEnabled" = 0
+    "HighEfficiencyModeEnabled" = 0
+    "EdgeManagementEnabled" = 0
+    "DesktopSharingHubEnabled" = 0
+    "CopilotPageContextEnabled" = 0
+    "ProactiveAuthWorkflowEnabled" = 0
+    "CopilotPageContext" = 0
+    "NewTabPageContentEnabled" = 0
+    "NewTabPageAppLauncherEnabled" = 0
+    "NewTabPageBingChatEnabled" = 0
+    "NewTabPageQuickLinksEnabled" = 0
+    "QRCodeGeneratorEnabled" = 0
+    "TranslateEnabled" = 0
+    "SpotlightExperiencesAndRecommendationsEnabled" = 0
+    "ApplicationGuardFavoritesSyncEnabled" = 0
+    "ApplicationGuardTrafficIdentificationEnabled" = 0
+    "WebToBrowserSignInEnabled" = 0
+    "SeamlessWebToBrowserSignInEnabled" = 0
+    "EdgeAutofillMlEnabled" = 0
+    "GenAILocalFoundationalModelSettings" = 1
+    "PersonalizeTopSitesInCustomizeSidebarEnabled" = 0
+    "ExtensionsPerformanceDetectorEnabled" = 0
+    "PerformanceDetectorEnabled" = 0
+    "EdgeEntraCopilotPageContext" = 0
+    "MouseGestureEnabled" = 0
+    "DisableScreenshots" = 0
+    "WebCaptureEnabled" = 0
+    "SpellcheckEnabled" = 0
+    "AddressBarWorkSearchResultsEnabled" = 0
+    "ScarewareBlockerProtectionEnabled" = 0
+    "AddressBarTrendingSuggestEnabled" = 0
 }
-Else {
-    Write-Verbose "SQL not installed. Skipping SLQ optimization"
+
+foreach ($key in $edgeSettings.GetEnumerator()) {
+    if ($key.Value -is [string]) {
+        Set-ItemProperty -Path $edgeRegPath -Name $key.Name -Value $key.Value -Type String -Force
+    } else {
+        Set-ItemProperty -Path $edgeRegPath -Name $key.Name -Value $key.Value -Type DWord -Force
+    }
 }
 
 #endregion
@@ -314,30 +345,144 @@ Start-Process -Wait `
     -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" `
     -ArgumentList 'update --passive --norestart --installpath "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"'
 
-# Set file and folder path for SSMS installer .exe
-$folderpath = "c:\windows\temp"
+# Check and install SSMS if not present
+function Test-SSMSInstalled {
+    $ssmsPaths = @(
+        "C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Ssms.exe", # SSMS 2019
+        "C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Ssms.exe"  # SSMS 2022
+    )
+
+    foreach ($path in $ssmsPaths) {
+        if (Test-Path $path) {
+            $version = (Get-Item $path).VersionInfo.ProductVersion
+            Write-Host "SSMS found at $path (Version: $version)"
+            return $true
+        }
+    }
+
+    $registryPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+
+    foreach ($regPath in $registryPaths) {
+        $ssmsReg = Get-ItemProperty $regPath -ErrorAction SilentlyContinue | 
+                    Where-Object { $_.DisplayName -like "*SQL Server Management Studio*" -and 
+                                   ($_.DisplayVersion -like "19.*" -or $_.DisplayVersion -like "20.*") }
+        if ($ssmsReg) {
+            Write-Host "SSMS found in registry: $($ssmsReg.DisplayName) (Version: $($ssmsReg.DisplayVersion))"
+            return $true
+        }
+    }
+
+    Write-Host "No SSMS 2019 or 2022 installation detected."
+    return $false
+}
+
+# Set file and folder path for SSMS installer
+$folderpath = "C:\Windows\Temp"
 $filepath = "$folderpath\SSMS-Setup-ENU.exe"
 
-# If SSMS not present, download
-if (!(Test-Path $filepath)) {
-    Write-Host "Downloading SQL Server SSMS..."
-    $URL = "https://aka.ms/ssmsfullsetup"
-    $clnt = New-Object System.Net.WebClient
-    $clnt.DownloadFile($URL, $filepath)
-    Write-Host "SSMS installer download complete" -ForegroundColor Green
-}
-else {
-    Write-Host "Located the SQL SSMS Installer binaries, moving on to install..."
+# Install SSMS only if not already installed
+if (-not (Test-SSMSInstalled)) {
+    # Download SSMS installer if not present
+    if (!(Test-Path $filepath)) {
+        Write-Host "Downloading SQL Server SSMS..."
+        try {
+            $URL = "https://aka.ms/ssmsfullsetup"
+            $clnt = New-Object System.Net.WebClient
+            $clnt.DownloadFile($URL, $filepath)
+            Write-Host "SSMS installer download complete" -ForegroundColor Green
+        } catch {
+            Write-Host "Error downloading SSMS installer: $_" -ForegroundColor Red
+            Exit 1
+        }
+    } else {
+        Write-Host "Located the SQL SSMS Installer binaries, moving on to installation..."
+    }
+
+    # Start the SSMS installer
+    Write-Host "Installing SSMS..."
+    try {
+        $Parms = "/Install /Quiet /Norestart /Logs `"$folderpath\ssms_install_log.txt`" SSMSInstallRoot=`"C:\Program Files (x86)\Microsoft SQL Server Management Studio 20`""
+        $process = Start-Process -FilePath $filepath -ArgumentList $Parms -Wait -PassThru
+        if ($process.ExitCode -eq 0) {
+            Write-Host "SSMS installation complete" -ForegroundColor Green
+        } else {
+            Write-Host "SSMS installation failed with exit code: $($process.ExitCode)" -ForegroundColor Red
+            Write-Host "Check logs at $folderpath\ssms_install_log.txt for details"
+            Exit 1
+        }
+    } catch {
+        Write-Host "Error during SSMS installation: $_" -ForegroundColor Red
+        Exit 1
+    }
+
+    # Clean up installer
+    Remove-Item $filepath -Force -ErrorAction SilentlyContinue
+} else {
+    Write-Host "SSMS is already installed. Updates will be handled by Windows Update."
 }
 
-# Start the SSMS installer
-Write-Host "Beginning SSMS install..." -NoNewline
-$Parms = " /Install /Quiet /Norestart /Logs log.txt"
-$Prms = $Parms.Split(" ")
-& "$filepath" $Prms | Out-Null
-Write-Host "SSMS installation complete" -ForegroundColor Green
+# SQL Optimization section
+#region SQL optimization
+Function Execute-Sql {
+    Param(
+        [Parameter(Mandatory = $true)][string]$server,
+        [Parameter(Mandatory = $true)][string]$database,
+        [Parameter(Mandatory = $true)][string]$command
+    )
+    Process {
+        $scon = New-Object System.Data.SqlClient.SqlConnection
+        $scon.ConnectionString = "Data Source=$server;Initial Catalog=$database;Integrated Security=true"
+        $cmd = New-Object System.Data.SqlClient.SqlCommand
+        $cmd.Connection = $scon
+        $cmd.CommandTimeout = 0
+        $cmd.CommandText = $command
+        try {
+            $scon.Open()
+            $cmd.ExecuteNonQuery()
+        }
+        catch [Exception] {
+            Write-Warning $_.Exception.Message
+        }
+        finally {
+            $scon.Dispose()
+            $cmd.Dispose()
+        }
+    }
+}
+
+If (Test-Path "HKLM:\Software\Microsoft\Microsoft SQL Server\Instance Names\SQL") {
+    if (Get-Module -ListAvailable -Name dbatools) {
+        Write-Host "Updating dbatools"
+        Update-Module -Name dbatools
+    }
+    else {
+        Write-Host "Installing dbatools PowerShell module"
+        Install-Module -Name dbatools -SkipPublisherCheck -Scope AllUsers
+        Import-Module dbatools
+    }
+    
+    Set-DbatoolsInsecureConnection -SessionOnly
+    Write-Host "Setting max memory to 4GB"
+    Set-DbaMaxMemory -SqlInstance . -Max 4096
+    Write-Host "Adding trace flags"
+    Enable-DbaTraceFlag -SqlInstance . -TraceFlag 174, 834, 1204, 1222, 1224, 2505, 7412
+    Write-Host "Restarting service"
+    Restart-DbaService -Type Engine -Force
+    Write-Host "Setting recovery model"
+    Set-DbaDbRecoveryModel -SqlInstance . -RecoveryModel Simple -Database AxDB -Confirm:$false
+}
+#endregion
+
+# Enable updates for all Microsoft updates
+Write-Host "Enabling updates for all Microsoft products..."
+$ServiceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"; 
+$ServiceManager.AddService2("7971f918-a847-4430-9279-4a52d1efe18d", 7, "") | Out-Null; 
+Write-Host "Microsoft Update service enabled."
 
 # Run Windows update
-Install-Module PSWindowsUpdate
+Install-Module PSWindowsUpdate -Force -SkipPublisherCheck
 Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
 #endregion

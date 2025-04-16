@@ -1,41 +1,50 @@
-# D365FO One-box Setup script
+# D365FO One-box Setup Script
 
-This PowerShell script automates the preparation of a D365 development machine. It performs various optimizations, installations, and configurations to ensure an efficient and streamlined development environment for Dynamics 365 Finance and Operations.
-This version is a fork of the original repository created by [dodiggitydag](https://github.com/dodiggitydag), and it has undergone significant changes to address bugs and ensure compatibility with the latest versions of SQL Server, Windows 2019, and Chocolatey. 
+Automates setup of a Dynamics 365 Finance and Operations development machine with installations, optimizations, and configurations.
+Forked from [dodiggitydag](https://github.com/dodiggitydag), updated for SQL Server, Windows Server, and Chocolatey compatibility.
 
 ## Compatibility
 
-The script has been tested on one-box virtual machine, version 10.0.37 and earlier versions.
+Tested on one-box VM, version 10.0.43 and earlier.
 
 ## What it does?
 
-The script performs the following actions:
+### Software Installation
 
-### Software installation
-- Installs Chocolatey and a list of software packages commonly used in development environments, including .NET Core, Google Chrome, Notepad++, 7-Zip, Postman, Visual Studio Code, NuGet, WinMerge, Agent Ransack, WizTree, smtp4dev, and Greenshot.
+- Chocolatey and packages: Google Chrome, Notepad++, 7-Zip, Postman, Agent Ransack, WizTree, smtp4dev, Greenshot, NuGet CLI.
+- SSMS 2022 (if not installed, versions 19.x/20.x).
+- `d365fo.tools` PowerShell module.
 
-### Development optimization
-- Uses d365fo.tools to optimize the development environment. Sets the web browser homepage to the local environment, changes the startup type of Management Reporter and Batch services to Disabled (it is recommended to enable them only when necessary), adds Windows Defender rules to speed up compilation time, and re-arms the Windows license.
+### Development Optimization
 
-### SQL optimization
-- Optimizes SQL Server by installing the dbatools PowerShell module, setting max memory (4GB), adding trace flags, setting recovery model and database options, purging disposable and staging table data, deleting specific references, and reclaiming database space.
+- `d365fo.tools`: Disables Management Reporter/Batch services, adds Defender rules, re-arms Windows license.
 
-### Miscellaneous
-- Clears all logs from the Event Viewer to ensure a clean starting point.
-- Modifies the local user policy by setting the password to never expire and disabling password changes.
-- Disables various privacy-related features in Windows, including Windows Telemetry, Bing search results in the Start Menu, and Cortana.
-- Sets the power settings to High Performance to ensure optimal performance during development.
+### SQL Optimization
+
+- Installs `dbatools` module.
+- Local SQL Server: Sets 4GB max memory, trace flags (174, 834, 1204, 1222, 1224, 2505, 7412), restarts service, sets `AxDB` recovery model to Simple.
+
+### Privacy and System Configuration
+
+- Clears Event Viewer logs.
+- Local user policy: Password never expires, disables password changes.
+- Disables Telemetry, SmartScreen, Bing in Start, WiFi Sense, activity tracking, Cortana.
+- Debloats Edge (disables telemetry, autofill, Cortana, Bing, promotions).
+- Sets High Performance power plan.
+
+### Updates
+
+- Enables Microsoft Update for all products.
+- Updates Visual Studio 2019/2022 (if installed).
+- Runs Windows Update with auto-reboot.
 
 ## Usage
 
-Before running the script, prepare the machine by following these steps:
-
-1. Run the "Generate Self-Signed Certificates" script.
+1. Run "Generate Self-Signed Certificates".
 2. Run "AdminUserProvisioning".
-3. Restore the database, if you have it, but keep the name AxDB.
-4. Install [.NET Framework 4.8](https://support.microsoft.com/en-us/topic/microsoft-net-framework-4-8-offline-installer-for-windows-9d23f658-3b97-68ab-d013-aa3c3e7495e0) and reboot.
+3. (10.0.39 or earlier) Install .NET Framework 4.8, reboot.
 
-Either download the repository and execute PowerShell as an administrator or download and execute directly from GitHub:
+Run as administrator:
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Oglaf/D365FO-Prepare-D365DevelopmentMachine/master/Prepare-D365DevelopmentMachine.ps1'))
