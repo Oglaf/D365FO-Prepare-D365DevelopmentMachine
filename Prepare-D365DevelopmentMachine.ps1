@@ -463,6 +463,10 @@ If (Test-Path "HKLM:\Software\Microsoft\Microsoft SQL Server\Instance Names\SQL"
         Install-Module -Name dbatools -SkipPublisherCheck -Scope AllUsers
         Import-Module dbatools
     }
+
+    Write-Host "Disabling 'Build metadata cache when AOS starts' to speed up restart times after compile"
+    $sql = "UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0"
+    Execute-Sql -server "." -database "AxDB" -command $sql
     
     Set-DbatoolsInsecureConnection -SessionOnly
     Write-Host "Setting max memory to 4GB"
