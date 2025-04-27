@@ -82,6 +82,7 @@ Else {
         "smtp4dev"
         "greenshot"
         "nuget.commandline"
+        "microsoftazurestorageexplorer"
     )
 
     # Install each program
