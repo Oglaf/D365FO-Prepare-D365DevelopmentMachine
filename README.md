@@ -5,7 +5,7 @@ Forked from [dodiggitydag](https://github.com/dodiggitydag), updated for SQL Ser
 
 ## Compatibility
 
-Tested on one-box VM, version 10.0.43 and earlier.
+Tested on one-box VM, version 10.0.44 and earlier.
 
 ## What it does?
 
