@@ -204,6 +204,26 @@ catch {
     Write-Error "Failed to download or apply Edge debloat registry file: $_"
 }
 
+# Debloat Google Chrome
+Write-Host "Applying Google Chrome debloat settings from yashgorana/chrome-debloat"
+$chromeRegUrl = "https://raw.githubusercontent.com/yashgorana/chrome-debloat/main/generated/windows/chrome.reg"
+$chromeRegFile = "$env:TEMP\chrome.reg"
+
+try {
+    Invoke-WebRequest -Uri $chromeRegUrl -OutFile $chromeRegFile
+    Write-Host "Downloaded chrome.reg"
+
+    # Import the registry file
+    Start-Process -FilePath "reg.exe" -ArgumentList "import `"$chromeRegFile`"" -Wait -NoNewWindow
+    Write-Host "Applied chrome.reg"
+
+    # Clean up
+    Remove-Item -Path $chromeRegFile -Force -ErrorAction SilentlyContinue
+}
+catch {
+    Write-Error "Failed to download or apply Chrome debloat registry file: $_"
+}
+
 #endregion
 
 #region Update power settings
@@ -265,7 +285,7 @@ function Test-SSMSInstalled {
 
 # Set file and folder path for SSMS installer
 $folderpath = "C:\Windows\Temp"
-$filepath = "$folderpath\SSMS-Setup-ENU.exe"
+$filepath = "$folderpath\vs_SSMS.exe"
 
 # Install SSMS only if not already installed
 if (-not (Test-SSMSInstalled)) {
@@ -273,7 +293,7 @@ if (-not (Test-SSMSInstalled)) {
     if (!(Test-Path $filepath)) {
         Write-Host "Downloading SQL Server SSMS..."
         try {
-            $URL = "https://aka.ms/ssmsfullsetup"
+            $URL = "https://aka.ms/ssms/22/release/vs_SSMS.exe"
             $clnt = New-Object System.Net.WebClient
             $clnt.DownloadFile($URL, $filepath)
             Write-Host "SSMS installer download complete" -ForegroundColor Green
