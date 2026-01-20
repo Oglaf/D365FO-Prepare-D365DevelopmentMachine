@@ -1,0 +1,31 @@
+name: Lint PowerShell
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Run PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          # Import the module (pre-installed on runners, but good practice to verify)
+          Import-Module PSScriptAnalyzer
+
+          # Run the analyzer
+          # -Path: Where your scripts are ('.' is root)
+          # -Recurse: Check subfolders
+          # -Severity: Fail on Errors (you can add 'Warning' if strict)
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+
+          # If errors found, output them and fail the build
+          if ($results) {
+              Write-Error "Linting errors found:"
+              $results | Format-Table -AutoSize
+              exit 1
+          } else {
+              Write-Host "No linting errors found." -ForegroundColor Green
+          }

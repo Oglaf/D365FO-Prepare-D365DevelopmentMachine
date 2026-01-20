@@ -1,51 +1,52 @@
 # D365FO One-box Setup Script
 
-Automates setup of a Dynamics 365 Finance and Operations development machine with installations, optimizations, and configurations.
-Forked from [dodiggitydag](https://github.com/dodiggitydag), updated for SQL Server, Windows Server, and Chocolatey compatibility.
+Automates setup of a Dynamics 365 Finance and Operations development machine with installations, optimizations, and configurations.  
+Forked from dodiggitydag, updated for SQL Server, Windows Server, and Chocolatey compatibility.
 
 ## Compatibility
-
-Tested on one-box VM, version 10.0.44 and earlier.
+Tested on one-box VM, version 10.0.46 and earlier.
 
 ## What it does?
 
-### Software Installation
+### Software installation
+- **Chocolatey packages**: Google Chrome, Notepad++, 7-Zip, Postman, Agent Ransack, WizTree, smtp4dev, Greenshot, NuGet CLI, **VS Code**, **Git**
+- Installs **SSMS 22** (SQL Server Management Studio 2022) if not installed
+- Installs the `d365fo.tools` PowerShell module
 
-- Chocolatey and packages: Google Chrome, Notepad++, 7-Zip, Postman, Agent Ransack, WizTree, smtp4dev, Greenshot, NuGet CLI.
-- SSMS 2022 (if not installed, versions 19.x/20.x).
-- `d365fo.tools` PowerShell module.
+### Development optimization (`d365fo.tools`)
+- Disables Management Reporter / Batch services
+- Adds Microsoft Defender exclusions and rules
+- **Enables IIS preload**
+- Re-arms Windows license
 
-### Development Optimization
+### SQL optimization
+- Installs the `dbatools` PowerShell module
+- For local SQL Server:
+  - Sets max memory to 4 GB
+  - Enables trace flags: `174`, `834`, `1204`, `1222`, `1224`, `2505`, `7412`
+  - Restarts SQL Server service
+  - Sets the `AxDB` database recovery model to `SIMPLE`
 
-- `d365fo.tools`: Disables Management Reporter/Batch services, adds Defender rules, re-arms Windows license.
-
-### SQL Optimization
-
-- Installs `dbatools` module.
-- Local SQL Server: Sets 4GB max memory, trace flags (174, 834, 1204, 1222, 1224, 2505, 7412), restarts service, sets `AxDB` recovery model to Simple.
-
-### Privacy and System Configuration
-
-- Clears Event Viewer logs.
-- Local user policy: Password never expires, disables password changes.
-- Disables Telemetry, SmartScreen, Bing in Start, WiFi Sense, activity tracking, Cortana.
-- Debloats Edge (disables telemetry, autofill, Cortana, Bing, promotions).
-- Sets High Performance power plan.
+### Privacy and system configuration
+- Clears Event Viewer logs
+- Local user policy: password never expires and disables password changes
+- Disables telemetry, SmartScreen, Bing in Start, Wi‑Fi Sense, activity tracking, Cortana
+- **Debloats Edge** using marlock9/edge-debloat to disable telemetry and bloat (keeps Favorites Bar enabled)
+- Sets High Performance power plan
 
 ### Updates
-
-- Enables Microsoft Update for all products.
-- Updates Visual Studio 2019/2022 (if installed).
-- Runs Windows Update with auto-reboot.
+- Enables Microsoft Update for all products
+- Updates Visual Studio 2019/2022 (if installed)
+- Runs Windows Update (with auto-reboot)
 
 ## Usage
 
 1. Run "Generate Self-Signed Certificates".
 2. Run "AdminUserProvisioning".
-3. (10.0.39 or earlier) Install .NET Framework 4.8, reboot.
+3. (For 10.0.39 or earlier) Install .NET Framework 4.8, then reboot.
 
-Run as administrator:
+Run as Administrator:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Oglaf/D365FO-Prepare-D365DevelopmentMachine/master/Prepare-D365DevelopmentMachine.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force;iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Oglaf/D365FO-Prepare-D365DevelopmentMachine/master/src/Prepare-D365DevelopmentMachine.ps1'))
 ```
