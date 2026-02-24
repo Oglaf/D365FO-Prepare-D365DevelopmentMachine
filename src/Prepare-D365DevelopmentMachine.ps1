@@ -50,8 +50,8 @@ Stop-D365Environment
 
 #region Installing additional software using Chocolatey
 If (Test-Path -Path "$env:ProgramData\Chocolatey") {
-    choco upgrade chocolatey -y -r
-    choco upgrade all --ignore-checksums -y -r
+    choco upgrade chocolatey -y -r --no-progress --exitwhenrebootdetected
+    choco upgrade all --ignore-checksums -y -r --no-progress --exitwhenrebootdetected
 }
 Else {
     Write-Host "Installing Chocolatey"
@@ -90,7 +90,7 @@ Else {
     # Install each program
     foreach ($packageToInstall in $packages) {
         Write-Host "Installing $packageToInstall" -ForegroundColor Green
-        & $chocoExePath "install" $packageToInstall "--ignore-checksums" "-y" "-r"
+        & $chocoExePath "install" $packageToInstall "--ignore-checksums" "-y" "-r" "--no-progress" "--exitwhenrebootdetected"
     }
 }
 #endregion
@@ -308,7 +308,7 @@ if (-not (Test-SSMSInstalled)) {
     # Start the SSMS installer
     Write-Host "Installing SSMS..."
     try {
-        $Parms = "/Install /Quiet /Norestart /Logs `"$folderpath\ssms_install_log.txt`" SSMSInstallRoot=`"C:\Program Files (x86)\Microsoft SQL Server Management Studio 22`""
+        $Parms = "--installPath `"C:\Program Files (x86)\Microsoft SQL Server Management Studio 22`" --quiet --wait"
         $process = Start-Process -FilePath $filepath -ArgumentList $Parms -Wait -PassThru
         if ($process.ExitCode -eq 0) {
             Write-Host "SSMS installation complete" -ForegroundColor Green
