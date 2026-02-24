@@ -4,7 +4,7 @@
  # .NET Framework 4.8 or above required.
  #
  # Compatibility:
- # The script has been tested on OneBox virtual machine, version 10.0.43 and earlier versions.
+ # The script has been tested on OneBox virtual machine, version 10.0.46 and earlier versions.
  #>
 #region Check if required .NET version is installed
 $requiredVersion = '4.8'
@@ -26,6 +26,11 @@ if ([string]::IsNullOrEmpty($dotNetVersion) -or [version]$dotNetVersion -lt [ver
 # Clean all logs from Event Viewer
 Write-Host "Clearing logs from event viewer"
 wevtutil el | Foreach-Object { wevtutil cl "$_" }
+
+#region Install NuGet provider
+Write-Host "Installing NuGet provider..."
+Install-PackageProvider -Name NuGet -Force -Confirm:$false | Out-Null
+#endregion
 
 #region Installing d365fo.tools
 
@@ -330,7 +335,7 @@ if (-not (Test-SSMSInstalled)) {
 
 # SQL Optimization section
 #region SQL optimization
-Function Execute-Sql {
+Function Invoke-Sql {
     Param(
         [Parameter(Mandatory = $true)][string]$server,
         [Parameter(Mandatory = $true)][string]$database,
@@ -370,7 +375,7 @@ If (Test-Path "HKLM:\Software\Microsoft\Microsoft SQL Server\Instance Names\SQL"
 
     Write-Host "Disabling 'Build metadata cache when AOS starts' to speed up restart times after compile"
     $sql = "UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0"
-    Execute-Sql -server "." -database "AxDB" -command $sql
+    Invoke-Sql -server "." -database "AxDB" -command $sql
     
     Set-DbatoolsInsecureConnection -SessionOnly
     Write-Host "Setting max memory to 4GB"
