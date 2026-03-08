@@ -50,3 +50,18 @@ Run as Administrator:
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force;iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Oglaf/D365FO-Prepare-D365DevelopmentMachine/master/src/Prepare-D365DevelopmentMachine.ps1'))
 ```
+
+Optional switches (when running from local file):
+
+```powershell
+.\src\Prepare-D365DevelopmentMachine.ps1 -SkipChocolatey
+.\src\Prepare-D365DevelopmentMachine.ps1 -SkipPrivacy -SkipWindowsUpdate
+.\src\Prepare-D365DevelopmentMachine.ps1 -SkipSSMS -SkipSqlOptimization
+```
+
+Available switches:
+- `-SkipChocolatey`
+- `-SkipPrivacy`
+- `-SkipSSMS`
+- `-SkipSqlOptimization`
+- `-SkipWindowsUpdate`
